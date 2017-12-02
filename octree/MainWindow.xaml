@@ -5,8 +5,60 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:octree"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525">
+        Title="MainWindow" MinHeight="500" MinWidth="600" Height="600" Width="800">
     <Grid>
+        <Grid.Resources>
+            <Style TargetType="Image">
+                <Setter Property="Margin" Value="5"/>
+            </Style>
+            <Style TargetType="Label">
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="FontSize" Value="15"/>
+            </Style>
+            <Style TargetType="Button">
+                <Setter Property="Margin" Value="5"/>
+                <Setter Property="Padding" Value="5"/>
+                <Setter Property="FontSize" Value="15"/>
+                <Setter Property="MinWidth" Value="100"/>
+            </Style>
+        </Grid.Resources>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*"/>
+            <ColumnDefinition Width="2*"/>
+        </Grid.ColumnDefinitions>
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="8*"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Image Name="OriginalBmp"/>
+            <Slider Grid.Row="1" Minimum="1" Maximum="256" IsSnapToTickEnabled="True" TickFrequency="1" Name="ColorsCount" />
+            <Button Grid.Row="2" Name="ReduceToNR" HorizontalAlignment="Center">Reduce to 16 colors</Button>
+            <Grid Grid.Row="3">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Name="ToGrayScale" HorizontalAlignment="Center">To grayscale</Button>
+                <Button Grid.Column="1" Name="Save" HorizontalAlignment="Center">Save</Button>
+            </Grid>
+            
+        </Grid>
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Label Grid.Row="0">Reduce after octree construction</Label>
+            <Image Grid.Row="1" Name="reduceAfterConst"/>
+            <Label Grid.Row="2">Reduce along octree construction</Label>
+            <Image Grid.Row="3" Name="reduceAlongConst"/>
+        </Grid>
         
     </Grid>
 </Window>
