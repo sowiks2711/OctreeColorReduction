@@ -32,8 +32,22 @@ namespace octree
             }
 
         }
+        class SortedSetTreeContainer: IComparable<SortedSetTreeContainer>
+        {
+            public Tree t;
+            public Tree parent;
+            public int ind;
+            public int level;
+
+            public int CompareTo(SortedSetTreeContainer other)
+            {
+                if (this.level != other.level) return this.level.CompareTo(other.level);
+                return -this.t.counter.CompareTo(other.t.counter);
+            }
+        }
         private Tree octreeHead;
         private Dictionary<int, LinkedList<Tree>> treesByLevels;
+        private SortedSet<SortedSetTreeContainer> sortedTrees = new SortedSet<SortedSetTreeContainer>();
         public WriteableBitmap ReduceColorsAfterConst(WriteableBitmap wbmp, int nrOfColors)
         {
             WriteableBitmap reduced = new WriteableBitmap(wbmp);
@@ -67,17 +81,12 @@ namespace octree
             while (octreeHead.childrenCounter > nrOfColors)
             {
                 var t = s.Pop();
-                if (t.nonEpmtyBranchesCount > 0)
+                while (t.nonEpmtyBranchesCount > 0 && octreeHead.childrenCounter > 0)
                 {
-                    for (int i = 0; i < t.next.Length; i++)
-                    {
-                        if (t.next[i] != null)
-                        {
-                            octreeHead.childrenCounter--;
-                            t.next[i] = null;
-                            if (octreeHead.childrenCounter <= nrOfColors) break;
-                        }
-                    }
+                    int i = t.leastPopularIndex();
+                    octreeHead.childrenCounter--;
+                    t.nonEpmtyBranchesCount--;
+                    t.next[i] = null;
                 }
 
             }
@@ -186,8 +195,8 @@ namespace octree
             while(q.Count != 0)
             {
                 Tree it = q.Dequeue();
-                s.Push(it);
                 if (it.nonEpmtyBranchesCount == 0) continue;
+                s.Push(it);
                 foreach (var tt in it.next)
                     if (tt != null)
                         q.Enqueue(tt);
