@@ -27,7 +27,6 @@ namespace octree
             //var bmpOryg = new BitmapImage(new Uri(@"pack://application:,,,/Resources/sky.jpg"));
             //var bmpOryg = new BitmapImage(new Uri(@"pack://application:,,,/Resources/car.jpg"));
             OriginalBmp.Source = bmpOryg;
-            reduceAfterConst.Source = bmpOryg;
             WriteableBitmap wbmp = new WriteableBitmap(bmpOryg);
             //for (int i = 0; i < wbmp.PixelHeight; i++)
             //{
@@ -40,7 +39,8 @@ namespace octree
             //    }
 
             //}
-            reduceAlongConst.Source = new ColorReducer().ReduceColors(wbmp,50);
+            reduceAfterConst.Source = new ColorReducer().ReduceColorsAfterConst(wbmp,100);
+            reduceAlongConst.Source = new ColorReducer().ReduceColorsAlongConst(wbmp,100);
         }
     
     

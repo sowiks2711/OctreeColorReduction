@@ -33,18 +33,33 @@ namespace octree
 
         }
         private Tree octreeHead;
-        public WriteableBitmap ReduceColors(WriteableBitmap wbmp, int nrOfColors)
+        private Dictionary<int, LinkedList<Tree>> treesByLevels;
+        public WriteableBitmap ReduceColorsAfterConst(WriteableBitmap wbmp, int nrOfColors)
         {
             WriteableBitmap reduced = new WriteableBitmap(wbmp);
             octreeHead = new Tree();
-            for(int i = 0; i < wbmp.PixelHeight; i++)
+            for (int i = 0; i < wbmp.PixelHeight; i++)
             {
                 for (int j = 0; j < wbmp.PixelWidth; j++)
                 {
-                    InsertTree(octreeHead, wbmp.GetPixel(j, i),0);
+                    InsertTree(octreeHead, wbmp.GetPixel(j, i), 0);
                 }
             }
 
+            reduce(nrOfColors);
+
+            for (int i = 0; i < wbmp.PixelHeight; i++)
+            {
+                for (int j = 0; j < wbmp.PixelWidth; j++)
+                {
+                    reduced.SetPixel(j, i, findReducedColor(wbmp.GetPixel(j, i)));
+                }
+            }
+            return reduced;
+        }
+
+        private void reduce(int nrOfColors)
+        {
             Queue<Tree> q = new Queue<Tree>();
             Stack<Tree> s = new Stack<Tree>();
             Traverse(q, s, octreeHead);
@@ -52,9 +67,9 @@ namespace octree
             while (octreeHead.childrenCounter > nrOfColors)
             {
                 var t = s.Pop();
-                if(t.nonEpmtyBranchesCount > 0)
+                if (t.nonEpmtyBranchesCount > 0)
                 {
-                    for(int i = 0; i < t.next.Length; i++)
+                    for (int i = 0; i < t.next.Length; i++)
                     {
                         if (t.next[i] != null)
                         {
@@ -66,7 +81,22 @@ namespace octree
                 }
 
             }
-            
+        }
+
+        internal ImageSource ReduceColorsAlongConst(WriteableBitmap wbmp, int nrOfColors)
+        {
+            WriteableBitmap reduced = new WriteableBitmap(wbmp);
+            octreeHead = new Tree();
+            treesByLevels = new Dictionary<int, LinkedList<Tree>>();
+            treesByLevels[0] = new LinkedList<Tree>();
+            treesByLevels[0].AddFirst( octreeHead );
+            for(int i = 0; i < wbmp.PixelHeight; i++)
+            {
+                for (int j = 0; j < wbmp.PixelWidth; j++)
+                {
+                    InsertAndReduceTree(octreeHead, wbmp.GetPixel(j, i),0, nrOfColors);
+                }
+            }
             for(int i = 0; i < wbmp.PixelHeight; i++)
             {
                 for (int j = 0; j < wbmp.PixelWidth; j++)
@@ -75,6 +105,79 @@ namespace octree
                 }
             }
             return reduced;
+        }
+        private void InsertAndReduceTree(Tree tree, Color c, byte level, int nrOfColors)
+        {
+            if (tree.IsEmpty()) {
+                tree.c = c;
+                tree.counter++;
+                octreeHead.childrenCounter++;
+            }
+            else if (c == tree.c)
+            {
+                tree.counter++;
+            }
+            else
+            {
+                byte pos = GetOctalPosFromPixel(c, level);
+                if (tree.next[pos] == null)
+                {
+                    tree.next[pos] = new Tree();
+                    if(tree.nonEpmtyBranchesCount == 0)
+                    {
+                        if (treesByLevels.ContainsKey(level + 1))
+                        {
+                            treesByLevels[level].AddFirst(tree);
+                        }
+                        else
+                        {
+                            treesByLevels[level] = new LinkedList<Tree>();
+                            treesByLevels[level].AddFirst(tree);
+                        }
+                    }
+                    tree.nonEpmtyBranchesCount++;
+                    tree.next[pos].c = c;
+                    tree.next[pos].counter++;
+                    octreeHead.childrenCounter++;
+                    if(octreeHead.childrenCounter > nrOfColors)
+                    {
+                        //tree.next[tree.leastPopularIndex()] = null;
+                        reduceUsingDict(nrOfColors);
+                    }
+                }
+                else
+                {
+                    InsertAndReduceTree(tree.next[pos], c, ++level, nrOfColors);
+                }
+            }
+        }
+
+        private void reduceUsingDict(int nrOfColors)
+        {
+            bool isDone = nrOfColors >= octreeHead.childrenCounter;
+            for(int i = 6; i >= 0; i--)
+            {
+                if (!treesByLevels.ContainsKey(i)) continue;
+                var tl = treesByLevels[i];
+                foreach(var t in tl)
+                {
+                   while(t.nonEpmtyBranchesCount > 0 && !isDone)
+                   {
+                        int k = t.leastPopularIndex();
+                        if(t.next[k] != null)
+                        {
+                            t.next[k] = null;
+                            t.nonEpmtyBranchesCount--;
+                            if(treesByLevels.ContainsKey(i+1))
+                                treesByLevels[i+1].Remove(t.next[k]);
+                            if(t.nonEpmtyBranchesCount == 0)
+                                treesByLevels[i].Remove(t);
+                            isDone = --octreeHead.childrenCounter <= nrOfColors;
+                        }
+                        if (isDone) return;
+                   }
+                }
+            }
         }
 
         private void Traverse(Queue<Tree> q, Stack<Tree> s, Tree tree)
