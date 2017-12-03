@@ -39,8 +39,8 @@ namespace octree
             //    }
 
             //}
-            reduceAfterConst.Source = new ColorReducer().ReduceColorsAfterConst(wbmp,16);
-            reduceAlongConst.Source = new ColorReducer().ReduceColorsAlongConst(wbmp,16);
+            reduceAfterConst.Source = new ColorReducer().ReduceColorsAfterConst(wbmp,160000);
+            reduceAlongConst.Source = new ColorReducer().ReduceColorsAlongConst(wbmp,160000);
         }
     
     

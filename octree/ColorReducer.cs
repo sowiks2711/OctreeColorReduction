@@ -11,8 +11,11 @@ namespace octree
 {
     class ColorReducer
     {
-        private class Tree
+        private class Tree:IComparable<Tree> 
         {
+            public Tree parent;
+            public int ind;
+            public int level;
             public Tree[] next = new Tree[8];
             public Color? c;
             public int counter;
@@ -30,24 +33,24 @@ namespace octree
                         leastPopIndex = i;
                 return leastPopIndex;
             }
-
-        }
-        class SortedSetTreeContainer: IComparable<SortedSetTreeContainer>
-        {
-            public Tree t;
-            public Tree parent;
-            public int ind;
-            public int level;
-
-            public int CompareTo(SortedSetTreeContainer other)
+            public int CompareTo(Tree other)
             {
-                if (this.level != other.level) return this.level.CompareTo(other.level);
-                return -this.t.counter.CompareTo(other.t.counter);
+                int fc = this.level.CompareTo(other.level);
+                if (fc != 0) return fc;
+                int sc =  -this.counter.CompareTo(other.counter);
+                if (sc != 0) return sc;
+                int th = this.c?.R >= other.c?.R ? this.c?.R == other.c?.R ? 0 : 1 : -1;
+                if (th != 0) return th;
+                int tnh = this.c?.G >= other.c?.G ? this.c?.G == other.c?.G ? 0 : 1 : -1;
+                if (tnh != 0) return tnh;
+                int tlh = this.c?.B >= other.c?.B ? this.c?.B == other.c?.B ? 0 : 1 : -1;
+                return tlh;
             }
+
         }
         private Tree octreeHead;
         private Dictionary<int, LinkedList<Tree>> treesByLevels;
-        private SortedSet<SortedSetTreeContainer> sortedTrees = new SortedSet<SortedSetTreeContainer>();
+        private SortedSet<Tree> sortedTrees = new SortedSet<Tree>();
         public WriteableBitmap ReduceColorsAfterConst(WriteableBitmap wbmp, int nrOfColors)
         {
             WriteableBitmap reduced = new WriteableBitmap(wbmp);
@@ -96,9 +99,7 @@ namespace octree
         {
             WriteableBitmap reduced = new WriteableBitmap(wbmp);
             octreeHead = new Tree();
-            treesByLevels = new Dictionary<int, LinkedList<Tree>>();
-            treesByLevels[0] = new LinkedList<Tree>();
-            treesByLevels[0].AddFirst( octreeHead );
+            sortedTrees = new SortedSet<Tree>();
             for(int i = 0; i < wbmp.PixelHeight; i++)
             {
                 for (int j = 0; j < wbmp.PixelWidth; j++)
@@ -124,7 +125,9 @@ namespace octree
             }
             else if (c == tree.c)
             {
+                sortedTrees.Remove(tree);
                 tree.counter++;
+                sortedTrees.Add(tree);
             }
             else
             {
@@ -132,21 +135,13 @@ namespace octree
                 if (tree.next[pos] == null)
                 {
                     tree.next[pos] = new Tree();
-                    if(tree.nonEpmtyBranchesCount == 0)
-                    {
-                        if (treesByLevels.ContainsKey(level + 1))
-                        {
-                            treesByLevels[level].AddFirst(tree);
-                        }
-                        else
-                        {
-                            treesByLevels[level] = new LinkedList<Tree>();
-                            treesByLevels[level].AddFirst(tree);
-                        }
-                    }
                     tree.nonEpmtyBranchesCount++;
                     tree.next[pos].c = c;
                     tree.next[pos].counter++;
+                    tree.next[pos].parent = tree;
+                    tree.next[pos].ind = pos;
+                    tree.next[pos].level = level+1;
+                    sortedTrees.Add(tree.next[pos]);
                     octreeHead.childrenCounter++;
                     if(octreeHead.childrenCounter > nrOfColors)
                     {
@@ -163,30 +158,13 @@ namespace octree
 
         private void reduceUsingDict(int nrOfColors)
         {
-            bool isDone = nrOfColors >= octreeHead.childrenCounter;
-            for(int i = 6; i >= 0; i--)
-            {
-                if (!treesByLevels.ContainsKey(i)) continue;
-                var tl = treesByLevels[i];
-                foreach(var t in tl)
-                {
-                   while(t.nonEpmtyBranchesCount > 0 && !isDone)
-                   {
-                        int k = t.leastPopularIndex();
-                        if(t.next[k] != null)
-                        {
-                            t.next[k] = null;
-                            t.nonEpmtyBranchesCount--;
-                            if(treesByLevels.ContainsKey(i+1))
-                                treesByLevels[i+1].Remove(t.next[k]);
-                            if(t.nonEpmtyBranchesCount == 0)
-                                treesByLevels[i].Remove(t);
-                            isDone = --octreeHead.childrenCounter <= nrOfColors;
-                        }
-                        if (isDone) return;
-                   }
-                }
-            }
+           while(octreeHead.childrenCounter > nrOfColors)
+           {
+                var leastPop = sortedTrees.Max;
+                sortedTrees.Remove(leastPop);
+                leastPop.parent.next[leastPop.ind] = null;
+                octreeHead.childrenCounter--;
+           }
         }
 
         private void Traverse(Queue<Tree> q, Stack<Tree> s, Tree tree)
