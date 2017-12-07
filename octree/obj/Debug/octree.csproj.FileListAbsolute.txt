@@ -1,0 +1,15 @@
+C:\Users\sowik\source\repos\octree\octree\bin\Debug\octree.exe.config
+C:\Users\sowik\source\repos\octree\octree\bin\Debug\octree.exe
+C:\Users\sowik\source\repos\octree\octree\bin\Debug\octree.pdb
+C:\Users\sowik\source\repos\octree\octree\obj\Debug\octree.csprojResolveAssemblyReference.cache
+C:\Users\sowik\source\repos\octree\octree\obj\Debug\MainWindow.g.cs
+C:\Users\sowik\source\repos\octree\octree\obj\Debug\App.g.cs
+C:\Users\sowik\source\repos\octree\octree\obj\Debug\octree_MarkupCompile.cache
+C:\Users\sowik\source\repos\octree\octree\obj\Debug\octree_MarkupCompile.lref
+C:\Users\sowik\source\repos\octree\octree\obj\Debug\MainWindow.baml
+C:\Users\sowik\source\repos\octree\octree\obj\Debug\octree.g.resources
+C:\Users\sowik\source\repos\octree\octree\obj\Debug\octree.Properties.Resources.resources
+C:\Users\sowik\source\repos\octree\octree\obj\Debug\octree.csproj.GenerateResource.Cache
+C:\Users\sowik\source\repos\octree\octree\obj\Debug\octree.csproj.CoreCompileInputs.cache
+C:\Users\sowik\source\repos\octree\octree\obj\Debug\octree.exe
+C:\Users\sowik\source\repos\octree\octree\obj\Debug\octree.pdb

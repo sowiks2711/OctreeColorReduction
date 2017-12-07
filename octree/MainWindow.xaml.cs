@@ -20,29 +20,74 @@ namespace octree
     /// </summary>
     public partial class MainWindow : Window
     {
+        private BitmapImage bmp;
+        private bool isFirstFinished = false;
+        private bool isSecondFinished = false;
         public MainWindow()
         {
             InitializeComponent();
-            var bmpOryg = new BitmapImage(new Uri(@"pack://application:,,,/Resources/colorful-tree.jpg"));
-            //var bmpOryg = new BitmapImage(new Uri(@"pack://application:,,,/Resources/sky.jpg"));
-            //var bmpOryg = new BitmapImage(new Uri(@"pack://application:,,,/Resources/car.jpg"));
-            OriginalBmp.Source = bmpOryg;
-            WriteableBitmap wbmp = new WriteableBitmap(bmpOryg);
-            //for (int i = 0; i < wbmp.PixelHeight; i++)
-            //{
-            //    for (int j = 0; j < wbmp.PixelWidth; j++)
-            //    {
-            //        var c = wbmp.GetPixel(j, i);
-            //        c.A = 0;
-            //        wbmp.SetPixel(j, i, c );
+            try
+            {
+                bmp = new BitmapImage(new Uri(@"pack://application:,,,/Resources/colorful-tree.jpg"));
+                //bmp = new BitmapImage(new Uri(@"pack://application:,,,/Resources/sky.jpg"));
+                //sourceUri = new Uri(@"pack://application:,,,/Resources/car.jpg");
+                //bmp = new BitmapImage(sourceUri);
+                OriginalBmp.Source = bmp;
+                WriteableBitmap wbmp = new WriteableBitmap(bmp);
+                //ColorsCount.Maximum = countColors(wbmp);
+            } catch
+            {
 
-            //    }
-
-            //}
-            reduceAfterConst.Source = new ColorReducer().ReduceColorsAfterConst(wbmp,160000);
-            reduceAlongConst.Source = new ColorReducer().ReduceColorsAlongConst(wbmp,160000);
+            }
         }
-    
-    
+
+        private double countColors(WriteableBitmap wbmp)
+        {
+            HashSet<Color> colorsSet = new HashSet<Color>();
+            for(int i = 0; i < wbmp.PixelHeight; i++)
+            {
+                for (int j = 0; j < wbmp.PixelWidth; j++)
+                {
+                    colorsSet.Add(wbmp.GetPixel(j, i));
+                }
+            }
+            return colorsSet.Count;
+        }
+
+
+        private async void ReduceButtonClickAsync(object sender, RoutedEventArgs e)
+        {
+            var progress1 = new Progress<int>(value => FirstImagePB.Value = value);
+            int reducedColorsNr = (int)ColorsCount.Value;
+            ReduceToNR.IsEnabled = false;
+            WriteableBitmap copy = new WriteableBitmap(bmp);
+            isFirstFinished = false;
+            isSecondFinished = false;
+            copy.Freeze();
+            Task.Run(() =>
+            {
+                WriteableBitmap res1 = new ColorReducer().ReduceColorsAfterConst(copy, reducedColorsNr, progress1);
+                res1.Freeze();
+                this.Dispatcher.Invoke(() => reduceAfterConst.Source = res1 );
+                this.Dispatcher.Invoke(() => { isFirstFinished = true; TryToEnableButton(); } );
+
+            });
+            var progress2 = new Progress<int>(value => SecondImagePB.Value = value);
+
+            await Task.Run(() =>
+            {
+                WriteableBitmap res2 = new ColorReducer().ReduceColorsAlongConst(copy, reducedColorsNr, progress2);
+                res2.Freeze();
+                this.Dispatcher.Invoke(() => reduceAlongConst.Source = res2 );
+                this.Dispatcher.Invoke(() => { isSecondFinished = true; TryToEnableButton(); } );
+            });
+
+        }
+
+        private void TryToEnableButton()
+        {
+            if (isFirstFinished && isSecondFinished)
+                ReduceToNR.IsEnabled = true;
+        }
     }
 }

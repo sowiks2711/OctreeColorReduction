@@ -4,8 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace octree
 {
@@ -49,21 +51,28 @@ namespace octree
 
         }
         private Tree octreeHead;
-        private Dictionary<int, LinkedList<Tree>> treesByLevels;
         private SortedSet<Tree> sortedTrees = new SortedSet<Tree>();
-        public WriteableBitmap ReduceColorsAfterConst(WriteableBitmap wbmp, int nrOfColors)
+        public WriteableBitmap ReduceColorsAfterConst(WriteableBitmap wbmp, int nrOfColors, Progress<int> pb)
         {
-            WriteableBitmap reduced = new WriteableBitmap(wbmp);
+            WriteableBitmap reduced;
+            reduced = new WriteableBitmap(wbmp);
             octreeHead = new Tree();
+            sortedTrees = new SortedSet<Tree>();
+            double prog = 0;
+            double step = 40.0 / wbmp.PixelHeight;
             for (int i = 0; i < wbmp.PixelHeight; i++)
             {
                 for (int j = 0; j < wbmp.PixelWidth; j++)
                 {
                     InsertTree(octreeHead, wbmp.GetPixel(j, i), 0);
                 }
+                prog += step;
+                ((IProgress<int>)pb).Report((int)prog);
             }
 
-            reduce(nrOfColors);
+            reduceUsingDict(nrOfColors);
+                prog += 20;
+            ((IProgress<int>)pb).Report((int)prog);
 
             for (int i = 0; i < wbmp.PixelHeight; i++)
             {
@@ -71,41 +80,29 @@ namespace octree
                 {
                     reduced.SetPixel(j, i, findReducedColor(wbmp.GetPixel(j, i)));
                 }
+                prog += step;
+                ((IProgress<int>)pb).Report((int)prog);
             }
+
+            prog = 100;
+            ((IProgress<int>)pb).Report((int)prog);
+
             return reduced;
         }
-
-        private void reduce(int nrOfColors)
-        {
-            Queue<Tree> q = new Queue<Tree>();
-            Stack<Tree> s = new Stack<Tree>();
-            Traverse(q, s, octreeHead);
-
-            while (octreeHead.childrenCounter > nrOfColors)
-            {
-                var t = s.Pop();
-                while (t.nonEpmtyBranchesCount > 0 && octreeHead.childrenCounter > 0)
-                {
-                    int i = t.leastPopularIndex();
-                    octreeHead.childrenCounter--;
-                    t.nonEpmtyBranchesCount--;
-                    t.next[i] = null;
-                }
-
-            }
-        }
-
-        internal ImageSource ReduceColorsAlongConst(WriteableBitmap wbmp, int nrOfColors)
-        {
+        internal WriteableBitmap ReduceColorsAlongConst(WriteableBitmap wbmp, int nrOfColors, Progress<int> pb) {
             WriteableBitmap reduced = new WriteableBitmap(wbmp);
             octreeHead = new Tree();
             sortedTrees = new SortedSet<Tree>();
+            double prog = 0;
+            double step = 50.0 / wbmp.PixelHeight;
             for(int i = 0; i < wbmp.PixelHeight; i++)
             {
                 for (int j = 0; j < wbmp.PixelWidth; j++)
                 {
                     InsertAndReduceTree(octreeHead, wbmp.GetPixel(j, i),0, nrOfColors);
                 }
+                prog += step;
+                ((IProgress<int>)pb).Report((int)prog);
             }
             for(int i = 0; i < wbmp.PixelHeight; i++)
             {
@@ -113,6 +110,8 @@ namespace octree
                 {
                     reduced.SetPixel(j, i, findReducedColor(wbmp.GetPixel(j,i)));
                 }
+                prog += step;
+                ((IProgress<int>)pb).Report((int)prog);
             }
             return reduced;
         }
@@ -134,18 +133,9 @@ namespace octree
                 byte pos = GetOctalPosFromPixel(c, level);
                 if (tree.next[pos] == null)
                 {
-                    tree.next[pos] = new Tree();
-                    tree.nonEpmtyBranchesCount++;
-                    tree.next[pos].c = c;
-                    tree.next[pos].counter++;
-                    tree.next[pos].parent = tree;
-                    tree.next[pos].ind = pos;
-                    tree.next[pos].level = level+1;
-                    sortedTrees.Add(tree.next[pos]);
-                    octreeHead.childrenCounter++;
-                    if(octreeHead.childrenCounter > nrOfColors)
+                    AddLeaf(tree, c, level, pos);
+                    if (octreeHead.childrenCounter > nrOfColors)
                     {
-                        //tree.next[tree.leastPopularIndex()] = null;
                         reduceUsingDict(nrOfColors);
                     }
                 }
@@ -155,6 +145,7 @@ namespace octree
                 }
             }
         }
+
 
         private void reduceUsingDict(int nrOfColors)
         {
@@ -203,34 +194,33 @@ namespace octree
             }
             else if (c == tree.c)
             {
+                sortedTrees.Remove(tree);
                 tree.counter++;
+                sortedTrees.Add(tree);
             }
             else
             {
                 byte pos = GetOctalPosFromPixel(c, level);
-                if (pos == 7 && level == 0)
-                {
-
-                    c = c;
-                    pos = GetOctalPosFromPixel(c, level);
-                }
                 if (tree.next[pos] == null)
                 {
-                    tree.next[pos] = new Tree();
-                    tree.nonEpmtyBranchesCount++;
+                    AddLeaf(tree, c, level, pos);
                 }
                 InsertTree(tree.next[pos], c, ++level);
             }
         }
 
-        //private void updateNrOfChildren(Tree tree)
-        //{
-        //    while(tree != null)
-        //    {
-        //        tree.childrenCounter++;
-        //        tree = tree.parent;
-        //    }
-        //}
+        private void AddLeaf(Tree tree, Color c, byte level, byte pos)
+        {
+            tree.next[pos] = new Tree();
+            tree.nonEpmtyBranchesCount++;
+            tree.next[pos].c = c;
+            tree.next[pos].parent = tree;
+            tree.next[pos].ind = pos;
+            tree.next[pos].level = level + 1;
+            tree.next[pos].counter++;
+            octreeHead.childrenCounter++;
+            sortedTrees.Add(tree.next[pos]);
+        }
 
         private Tree NewAndInit(Color c)
         {
@@ -238,7 +228,6 @@ namespace octree
             t.c = c;
             t.counter++;
             return t;
-
         }
 
         private byte GetNthBit(byte r, byte pos)
@@ -246,33 +235,6 @@ namespace octree
             byte one = 1;
             byte shifted = (byte)(r >> pos);
             return (byte)(shifted & one);
-        }
-
-        private void reduce(Tree tree, int level, int nrOfColors)
-        {
-            if (tree.nonEpmtyBranchesCount == 0) return;
-            if (level < 8)
-            {
-                foreach (var t in tree.next)
-                {
-                    if (t != null) reduce(t, level + 1, nrOfColors);
-                }
-            }
-            //if (tree.nonEpmtyBranchesCount == 0) return;
-            //if (level < 8)
-            //{
-            //    foreach (var t in tree.next)
-            //        if (t != null) reduce(t, level + 1, nrOfColors);
-            //}
-            //while (tree.nonEpmtyBranchesCount > 0 && nrOfColors < octreeHead.childrenCounter)
-            //{
-            //    int lpi = tree.leastPopularIndex(); 
-            //    if (lpi > 7) break;
-            //    tree.next[lpi] = null;
-            //    octreeHead.childrenCounter--;
-            //    tree.nonEpmtyBranchesCount--;
-            //}
-
         }
 
         private byte GetOctalPosFromPixel(Color c, byte pos)
